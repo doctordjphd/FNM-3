@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friday Night Magic - NJComicStop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            color: black;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            border-bottom: 4px solid black;
+            padding: 20px 0;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            filter: contrast(200%);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .badge {
+            border: 2px solid black;
+            padding: 10px 20px;
+            font-weight: bold;
+        }
+        
+        .reservation-section {
+            background: black;
+            color: white;
+            padding: 60px 0;
+        }
+        
+        .reservation-card {
+            background: white;
+            color: black;
+            border: 4px solid white;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .date-selection {
+            margin-bottom: 30px;
+        }
+        
+        .date-option {
+            display: block;
+            margin-bottom: 10px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        
+        .date-option:hover {
+            background: #f0f0f0;
+        }
+        
+        .price-section {
+            border-top: 1px solid #ccc;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+        
+        .price-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .price {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .reserve-btn {
+            width: 100%;
+            background: black;
+            color: white;
+            border: 2px solid black;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .reserve-btn:hover {
+            background: #333;
+        }
+        
+        .reserve-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .hero {
+            text-align: center;
+            padding: 80px 0;
+            background: linear-gradient(to bottom, #f9f9f9, white);
+        }
+        
+        .hero h2 {
+            font-size: 3rem;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+        
+        .feature-card {
+            border: 2px solid black;
+            padding: 30px;
+            text-align: center;
+            background: white;
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        
+        footer {
+            border-top: 4px solid black;
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        .employee-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: black;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border: 2px solid black;
+            font-weight: bold;
+        }
+        
+        .employee-link:hover {
+            background: #333;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .hero h2 {
+                font-size: 2rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="logo.png" alt="NJComicStop Logo" class="logo">
+                    <div>
+                        <h1>FRIDAY NIGHT MAGIC</h1>
+                        <p style="font-size: 1.2rem; font-weight: bold;">NJComicStop</p>
+                    </div>
+                </div>
+                <div class="badge">8:30 PM - 10:30 PM</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Reservation Section - Above "Join the Magic" -->
+    <section class="reservation-section">
+        <div class="container">
+            <h3 style="text-align: center; font-size: 2.5rem; margin-bottom: 40px;">RESERVE YOUR SEAT</h3>
+            
+            <div class="reservation-card">
+                <h4 style="margin-bottom: 20px; font-size: 1.5rem;">📅 Select Your Date</h4>
+                <p style="margin-bottom: 20px; color: #666;">Choose which Friday Night Magic event you'd like to attend</p>
+                
+                <div class="date-selection" id="dateSelection">
+                    <!-- Dates will be populated by JavaScript -->
+                </div>
+                
+                <div class="price-section">
+                    <div class="price-display">
+                        <span style="font-weight: bold;">Entry Fee:</span>
+                        <span class="price">$10.00</span>
+                    </div>
+                    
+                    <div style="background: #f9f9f9; padding: 15px; margin: 15px 0; border-left: 4px solid black;">
+                        <p style="margin: 0; font-weight: bold; color: #333;">🏆 Prize: 1-2 booster packs + seat at next week's table</p>
+                    </div>
+                    
+                    <button class="reserve-btn" onclick="handleReservation()" id="reserveBtn" disabled>
+                        RESERVE YOUR SEAT NOW
+                    </button>
+                    
+                    <p style="font-size: 0.8rem; color: #666; text-align: center; margin-top: 10px;">
+                        You will be redirected to PayPal to complete your payment
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h2>JOIN THE MAGIC</h2>
+            <p>Experience the ultimate Friday night gaming at NJComicStop. Reserve your seat for an evening of competitive Magic: The Gathering.</p>
+            
+            <div class="features">
+                <div class="feature-card">
+                    <div class="feature-icon">🕐</div>
+                    <h3>Every Friday</h3>
+                    <p>8:30 PM - 10:30 PM</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3>Limited Seating</h3>
+                    <p>20 seats per table</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏆</div>
+                    <h3>Win Prizes</h3>
+                    <p>Booster packs + next week's seat</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">NJComicStop</p>
+            <p style="color: #666;">Visit us at NJcomicstop.com</p>
+            <p style="font-size: 0.9rem; color: #999; margin-top: 20px;">Reservations are confirmed only after payment completion</p>
+        </div>
+    </footer>
+
+    <!-- Employee Link -->
+    <a href="employee.html" class="employee-link">Staff Login</a>
+
+    <script>
+        let selectedDate = '';
+
+        // Generate Friday dates starting June 14th, 2024
+        function generateFridayDates() {
+            const dates = [];
+            const startDate = new Date('2024-06-14');
+
+            for (let i = 0; i < 12; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i * 7);
+                dates.push({
+                    date: date.toISOString().split('T')[0],
+                    formatted: date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    })
+                });
+            }
+            return dates;
+        }
+
+        // Populate date selection
+        function populateDates() {
+            const dates = generateFridayDates();
+            const container = document.getElementById('dateSelection');
+            
+            dates.forEach(friday => {
+                const label = document.createElement('label');
+                label.className = 'date-option';
+                label.innerHTML = `
+                    <input type="radio" name="date" value="${friday.date}" onchange="selectDate('${friday.date}')">
+                    ${friday.formatted}
+                `;
+                container.appendChild(label);
+            });
+        }
+
+        function selectDate(date) {
+            selectedDate = date;
+            document.getElementById('reserveBtn').disabled = false;
+        }
+
+        function handleReservation() {
+            if (!selectedDate) {
+                alert('Please select a date first!');
+                return;
+            }
+
+            // Replace YOUR_PAYPAL_EMAIL with your actual PayPal email
+            const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=YOUR_PAYPAL_EMAIL&item_name=Friday Night Magic - ${selectedDate}&amount=10.00&currency_code=USD&return=https://doctordjphd.github.io/FNM2/success.html&cancel_return=https://doctordjphd.github.io/FNM2/`;
+
+            window.open(paypalUrl, '_blank');
+        }
+
+        // Initialize the page
+        populateDates();
+    </script>
+</body>
+</html>
