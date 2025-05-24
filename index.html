@@ -56,7 +56,7 @@
         }
         
         .title-section h1 {
-            font-size: 2.8rem;
+            font-size: 2.2rem;
             font-weight: 900;
             margin-bottom: 8px;
             text-shadow: 2px 2px 0px #ddd;
@@ -170,6 +170,14 @@
         .date-option input[type="radio"] {
             margin-right: 12px;
             transform: scale(1.2);
+        }
+        
+        .no-events {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-style: italic;
+            font-size: 1.1rem;
         }
         
         .price-section {
@@ -491,7 +499,7 @@
             
             <div class="reservation-card">
                 <h3 class="card-title">📅 Select Your Date</h3>
-                <p class="card-subtitle">Choose which Magic The Gathering event you'd like to attend</p>
+                <p class="card-subtitle">Choose which Magic The Gathering event you'd like to attend this week</p>
                 
                 <div class="date-selection" id="dateSelection">
                     <!-- Dates will be populated by JavaScript -->
@@ -528,8 +536,8 @@
             <div class="features">
                 <div class="feature-card">
                     <span class="feature-icon">🕐</span>
-                    <h3>Daily Events</h3>
-                    <p>Sunday - Saturday<br>8:30 PM - 10:30 PM</p>
+                    <h3>Weekly Events</h3>
+                    <p>Check weekly schedule<br>8:30 PM - 10:30 PM</p>
                 </div>
                 <div class="feature-card">
                     <span class="feature-icon">👥</span>
@@ -560,41 +568,76 @@
     <script>
         let selectedDate = '';
 
-        // Generate events for Sunday through Saturday starting June 16th, 2024
-        function generateWeeklyEvents() {
-            const events = [];
-            const startDate = new Date('2024-06-16'); // June 16th, 2024 is a Sunday
+        // Get current week's events from localStorage
+        function getCurrentWeekEvents() {
+            const events = JSON.parse(localStorage.getItem('weeklyEvents') || '[]');
+            const currentWeekStart = getCurrentWeekStart();
+            
+            // Filter events for current week only
+            return events.filter(event => {
+                const eventDate = new Date(event.date);
+                const weekStart = new Date(currentWeekStart);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                
+                return eventDate >= weekStart && eventDate <= weekEnd;
+            });
+        }
 
-            for (let week = 0; week < 8; week++) {
-                for (let day = 0; day < 7; day++) {
-                    const date = new Date(startDate.getTime());
-                    date.setDate(date.getDate() + (week * 7) + day);
-                    
-                    events.push({
-                        date: date.toISOString().split('T')[0],
-                        formatted: date.toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        }) + ' - Commander'
-                    });
-                }
+        // Get the start of current week (Sunday)
+        function getCurrentWeekStart() {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - dayOfWeek);
+            weekStart.setHours(0, 0, 0, 0);
+            return weekStart;
+        }
+
+        // Initialize with default Friday event if no events exist
+        function initializeDefaultEvents() {
+            const existingEvents = JSON.parse(localStorage.getItem('weeklyEvents') || '[]');
+            if (existingEvents.length === 0) {
+                const currentWeekStart = getCurrentWeekStart();
+                const friday = new Date(currentWeekStart);
+                friday.setDate(currentWeekStart.getDate() + 5); // Friday is 5 days after Sunday
+                
+                const defaultEvent = {
+                    date: friday.toISOString().split('T')[0],
+                    name: 'Commander',
+                    time: '8:30 PM - 10:30 PM'
+                };
+                
+                localStorage.setItem('weeklyEvents', JSON.stringify([defaultEvent]));
             }
-            return events;
         }
 
         // Populate date selection
         function populateDates() {
-            const events = generateWeeklyEvents();
+            initializeDefaultEvents();
+            const events = getCurrentWeekEvents();
             const container = document.getElementById('dateSelection');
+            container.innerHTML = '';
+            
+            if (events.length === 0) {
+                container.innerHTML = '<div class="no-events">No events scheduled for this week. Check back later!</div>';
+                return;
+            }
             
             events.forEach(event => {
+                const eventDate = new Date(event.date);
+                const formatted = eventDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) + ' - ' + event.name;
+                
                 const label = document.createElement('label');
                 label.className = 'date-option';
                 label.innerHTML = `
                     <input type="radio" name="date" value="${event.date}" onchange="selectDate('${event.date}')">
-                    <strong>${event.formatted}</strong>
+                    <strong>${formatted}</strong>
                 `;
                 container.appendChild(label);
             });
