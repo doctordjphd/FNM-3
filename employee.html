@@ -131,20 +131,22 @@
             font-size: 1.1rem;
         }
         
-        select {
-            width: 100%;
-            padding: 15px;
-            border: 3px solid black;
-            font-size: 1.1rem;
+        .current-event {
+            padding: 20px;
+            background: #f8f9fa;
+            border: 2px solid black;
             border-radius: 8px;
-            background: white;
-            cursor: pointer;
+            margin-bottom: 20px;
         }
         
-        select:focus {
-            outline: none;
-            border-color: #333;
-            box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
+        .current-event h4 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .current-event p {
+            margin: 5px 0;
+            color: #333;
         }
         
         .info-grid {
@@ -171,7 +173,7 @@
             margin-bottom: 50px;
         }
         
-        .view-btn {
+        .btn {
             background: black;
             color: white;
             border: 4px solid black;
@@ -186,13 +188,13 @@
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
         }
         
-        .view-btn:hover:not(:disabled) {
+        .btn:hover:not(:disabled) {
             background: #333;
             transform: translateY(-3px);
             box-shadow: 0 12px 24px rgba(0,0,0,0.3);
         }
         
-        .view-btn:disabled {
+        .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
@@ -295,7 +297,7 @@
                 padding: 25px;
             }
             
-            .view-btn {
+            .btn {
                 padding: 20px 30px;
                 font-size: 1.1rem;
             }
@@ -342,22 +344,24 @@
     <!-- Dashboard -->
     <section class="dashboard">
         <div class="container">
-            <h2 class="dashboard-title">VIEW RESERVATIONS</h2>
+            <h2 class="dashboard-title">FRIDAY NIGHT MAGIC</h2>
             
             <div class="dashboard-grid">
-                <!-- Date Selection -->
+                <!-- Current Event -->
                 <div class="card">
-                    <h3>📅 Select Event Date</h3>
-                    <p>Choose which event's reservations to view</p>
-                    <select id="dateSelect" onchange="selectDate()">
-                        <option value="">Select an event...</option>
-                    </select>
+                    <h3>📅 This Week's Event</h3>
+                    <p>Current Friday Night Magic event details</p>
+                    
+                    <div class="current-event" id="currentEvent">
+                        <!-- Event details will be populated by JavaScript -->
+                    </div>
                 </div>
                 
                 <!-- Table Info -->
                 <div class="card">
                     <h3>👥 Table Information</h3>
                     <p>Seating arrangement and event details</p>
+                    
                     <div class="info-grid">
                         <div class="info-row">
                             <span>Seats per table:</span>
@@ -372,6 +376,10 @@
                             <span>$10.00</span>
                         </div>
                         <div class="info-row">
+                            <span>Format:</span>
+                            <span>Commander</span>
+                        </div>
+                        <div class="info-row">
                             <span>Prize:</span>
                             <span>1-2 booster packs + next week's seat</span>
                         </div>
@@ -381,10 +389,10 @@
             
             <!-- Action Button -->
             <div class="action-section">
-                <button class="view-btn" onclick="openGoogleSheet()" id="viewBtn" disabled>
-                    👁️ View Google Sheet
+                <button class="btn" onclick="openGoogleSheet()" id="viewBtn">
+                    👁️ View Reservations
                 </button>
-                <p id="selectedInfo" class="selected-info"></p>
+                <p id="selectedInfo" class="selected-info">View this week's Friday Night Magic reservations</p>
             </div>
             
             <!-- Instructions -->
@@ -392,13 +400,22 @@
                 <h3>📋 Setup Instructions</h3>
                 
                 <div class="instruction-section">
+                    <h4>📅 Friday Events:</h4>
+                    <ol>
+                        <li>Each Friday automatically gets its own Google Sheet</li>
+                        <li>Sheets are created via the backend event-creator.js script</li>
+                        <li>Only the current week's Friday is shown to customers</li>
+                        <li>Previous weeks' data is preserved in their respective sheets</li>
+                    </ol>
+                </div>
+                
+                <div class="instruction-section">
                     <h4>🗂️ Google Sheets Setup:</h4>
                     <ol>
-                        <li>Create a Google Sheet with tabs for each event date</li>
-                        <li>Each tab should have columns: Name, Email, Payment Status, Seat Number, Timestamp</li>
-                        <li>Set up 20 rows for the maximum capacity</li>
-                        <li>Replace "YOUR_SHEET_ID" in the JavaScript with your actual Google Sheets ID</li>
-                        <li>Make the sheet viewable to "anyone with the link"</li>
+                        <li>Each Friday gets a unique Google Sheet with 20 seats</li>
+                        <li>Columns: Name, Email, Payment Status, Seat Number, Timestamp</li>
+                        <li>Sheets are automatically made viewable to "anyone with the link"</li>
+                        <li>Replace "YOUR_SHEET_ID" with the actual sheet ID for this week</li>
                     </ol>
                 </div>
                 
@@ -406,19 +423,9 @@
                     <h4>💳 PayPal Integration:</h4>
                     <ol>
                         <li>Replace "YOUR_PAYPAL_EMAIL" with your PayPal business email</li>
-                        <li>Set up PayPal IPN (Instant Payment Notification) to update the Google Sheet</li>
+                        <li>Set up PayPal IPN to update the correct week's Google Sheet</li>
                         <li>Configure success and cancel return URLs</li>
                         <li>Test payments with PayPal sandbox before going live</li>
-                    </ol>
-                </div>
-                
-                <div class="instruction-section">
-                    <h4>🆕 Creating New Events:</h4>
-                    <ol>
-                        <li>Use the event-creator.js backend script to create new events</li>
-                        <li>Each new event automatically creates a new Google Sheet</li>
-                        <li>Events are limited to the current week only</li>
-                        <li>Run the script with event details to set up everything automatically</li>
                     </ol>
                 </div>
             </div>
@@ -429,81 +436,67 @@
     <a href="index.html" class="home-link">← Back to Site</a>
 
     <script>
-        let selectedDate = '';
-
-        // Get this week's Friday event (only event this week)
-        function getThisWeekEvent() {
+        // Get this week's Friday
+        function getThisWeeksFriday() {
             const today = new Date();
             const dayOfWeek = today.getDay(); // 0 = Sunday, 5 = Friday
             
-            // Find this week's Friday
             let friday = new Date(today);
-            const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
             
-            if (dayOfWeek === 5) {
-                // Today is Friday
-                friday = new Date(today);
-            } else if (dayOfWeek < 5) {
-                // Friday is later this week
-                friday.setDate(today.getDate() + daysUntilFriday);
+            if (dayOfWeek <= 5) {
+                // If today is Sunday-Friday, get this week's Friday
+                friday.setDate(today.getDate() + (5 - dayOfWeek));
             } else {
-                // Friday is next week
-                friday.setDate(today.getDate() + daysUntilFriday);
+                // If today is Saturday, get next week's Friday
+                friday.setDate(today.getDate() + (5 - dayOfWeek + 7));
             }
             
-            return {
-                date: friday.toISOString().split('T')[0],
-                formatted: friday.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) + ' - Commander'
-            };
+            return friday;
         }
 
-        // Populate event select dropdown with only this week's Friday
-        function populateEventSelect() {
-            const event = getThisWeekEvent();
-            const select = document.getElementById('dateSelect');
-            select.innerHTML = '<option value="">Select an event...</option>';
-            
-            const option = document.createElement('option');
-            option.value = event.date;
-            option.textContent = event.formatted;
-            select.appendChild(option);
+        // Get sheet ID for a specific Friday (this would come from your backend)
+        function getSheetIdForFriday(fridayDate) {
+            // This is where you'd map Friday dates to their Google Sheet IDs
+            // For now, return a placeholder
+            return "YOUR_SHEET_ID_FOR_" + fridayDate.replace(/-/g, '_');
         }
 
-        function selectDate() {
-            const select = document.getElementById('dateSelect');
-            selectedDate = select.value;
-            const viewBtn = document.getElementById('viewBtn');
-            const info = document.getElementById('selectedInfo');
+        // Populate current event details
+        function populateCurrentEvent() {
+            const friday = getThisWeeksFriday();
+            const container = document.getElementById('currentEvent');
             
-            if (selectedDate) {
-                viewBtn.disabled = false;
-                const selectedOption = select.options[select.selectedIndex];
-                info.textContent = `This will open the Google Sheet for ${selectedOption.textContent}`;
-            } else {
-                viewBtn.disabled = true;
-                info.textContent = '';
-            }
+            const formatted = friday.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            const dateString = friday.toISOString().split('T')[0];
+            
+            container.innerHTML = `
+                <h4>${formatted} - Commander</h4>
+                <p><strong>Date:</strong> ${dateString}</p>
+                <p><strong>Time:</strong> 8:30 PM - 10:30 PM</p>
+                <p><strong>Format:</strong> Commander</p>
+                <p><strong>Entry Fee:</strong> $10.00</p>
+            `;
         }
 
         function openGoogleSheet() {
-            if (!selectedDate) {
-                alert('Please select a date first!');
-                return;
-            }
-
-            // Replace YOUR_SHEET_ID with your actual Google Sheets ID
-            const googleSheetUrl = `https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0&range=A1:E21`;
+            const friday = getThisWeeksFriday();
+            const dateString = friday.toISOString().split('T')[0];
+            const sheetId = getSheetIdForFriday(dateString);
+            
+            // Replace with actual Google Sheets URL
+            const googleSheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0&range=A1:E21`;
             
             window.open(googleSheetUrl, '_blank');
         }
 
         // Initialize the page
-        populateEventSelect();
+        populateCurrentEvent();
     </script>
 </body>
 </html>
