@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Dashboard - Friday Night Magic</title>
+    <title>Employee Dashboard - Magic The Gathering Events</title>
     <style>
         * {
             margin: 0;
@@ -331,7 +331,7 @@
                     <img src="logo.png" alt="NJComicStop Logo" class="logo">
                     <div class="title-section">
                         <h1>EMPLOYEE DASHBOARD</h1>
-                        <p>Friday Night Magic</p>
+                        <p>Magic The Gathering Events</p>
                     </div>
                 </div>
                 <div class="staff-badge">🔒 Staff Only</div>
@@ -348,9 +348,9 @@
                 <!-- Date Selection -->
                 <div class="card">
                     <h3>📅 Select Event Date</h3>
-                    <p>Choose which Friday's reservations to view</p>
+                    <p>Choose which event's reservations to view</p>
                     <select id="dateSelect" onchange="selectDate()">
-                        <option value="">Select a Friday...</option>
+                        <option value="">Select an event...</option>
                     </select>
                 </div>
                 
@@ -394,7 +394,7 @@
                 <div class="instruction-section">
                     <h4>🗂️ Google Sheets Setup:</h4>
                     <ol>
-                        <li>Create a Google Sheet with tabs for each Friday date</li>
+                        <li>Create a Google Sheet with tabs for each event date</li>
                         <li>Each tab should have columns: Name, Email, Payment Status, Seat Number, Timestamp</li>
                         <li>Set up 20 rows for the maximum capacity</li>
                         <li>Replace "YOUR_SHEET_ID" in the JavaScript with your actual Google Sheets ID</li>
@@ -421,36 +421,39 @@
     <script>
         let selectedDate = '';
 
-        // Generate Friday dates starting June 14th, 2024
-        function generateFridayDates() {
-            const dates = [];
-            const startDate = new Date('2024-06-14'); // June 14th, 2024 is a Friday
+        // Generate events for Sunday through Saturday starting June 16th, 2024
+        function generateWeeklyEvents() {
+            const events = [];
+            const startDate = new Date('2024-06-16'); // June 16th, 2024 is a Sunday
 
-            for (let i = 0; i < 12; i++) {
-                const date = new Date(startDate.getTime()); // Create a copy using timestamp
-                date.setDate(date.getDate() + (i * 7)); // Add 7 days for each iteration
-                dates.push({
-                    date: date.toISOString().split('T')[0],
-                    formatted: date.toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    })
-                });
+            for (let week = 0; week < 8; week++) {
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(startDate.getTime());
+                    date.setDate(date.getDate() + (week * 7) + day);
+                    
+                    events.push({
+                        date: date.toISOString().split('T')[0],
+                        formatted: date.toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        }) + ' - Commander'
+                    });
+                }
             }
-            return dates;
+            return events;
         }
 
         // Populate date selection
         function populateDates() {
-            const dates = generateFridayDates();
+            const events = generateWeeklyEvents();
             const select = document.getElementById('dateSelect');
             
-            dates.forEach(friday => {
+            events.forEach(event => {
                 const option = document.createElement('option');
-                option.value = friday.date;
-                option.textContent = friday.formatted;
+                option.value = event.date;
+                option.textContent = event.formatted;
                 select.appendChild(option);
             });
         }
