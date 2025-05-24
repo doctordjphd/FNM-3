@@ -427,8 +427,8 @@
             const startDate = new Date('2024-06-14'); // June 14th, 2024 is a Friday
 
             for (let i = 0; i < 12; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + (i * 7)); // Add 7 days for each week
+                const date = new Date(startDate.getTime()); // Create a copy using timestamp
+                date.setDate(date.getDate() + (i * 7)); // Add 7 days for each iteration
                 dates.push({
                     date: date.toISOString().split('T')[0],
                     formatted: date.toLocaleDateString('en-US', {
