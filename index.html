@@ -180,6 +180,14 @@
             transform: scale(1.2);
         }
         
+        .seat-availability {
+            font-size: 0.9rem;
+            color: #e67e22;
+            font-weight: bold;
+            margin-top: 5px;
+            margin-left: 28px;
+        }
+        
         .seat-selection {
             margin-bottom: 25px;
             border: 2px solid #eee;
@@ -670,6 +678,7 @@
             label.innerHTML = `
                 <input type="radio" name="date" value="${dateString}" onchange="selectDate('${dateString}')" checked>
                 <strong>${formatted}</strong>
+                <div class="seat-availability">16/20 seats remaining</div>
             `;
             container.appendChild(label);
         
