@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPal Integration Setup - Complete Guide</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .step {
+            background: #f8f9fa;
+            border: 3px solid #333;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 25px 0;
+            box-shadow: 4px 4px 0px #333;
+        }
+        .step h3 {
+            color: #333;
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+        .success {
+            background: #d4edda;
+            border: 3px solid #28a745;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 3px solid #ffc107;
+            color: #856404;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 3px solid #17a2b8;
+            color: #0c5460;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Complete PayPal Integration Setup</h1>
+    
+    <div class="success">
+        <h3>🎉 Your Vercel Environment is Ready!</h3>
+        <p>The PAYPAL_WEBHOOK_ID environment variable has been configured. Now let's complete the integration setup.</p>
+    </div>
+
+    <div class="step">
+        <h3>📋 Step 1: Deploy Your Tournament Manager</h3>
+        <ol>
+            <li>Push this code to your GitHub repository</li>
+            <li>Connect the repository to Vercel</li>
+            <li>Deploy the project</li>
+            <li>Note your Vercel deployment URL (e.g., <code>https://your-app.vercel.app</code>)</li>
+        </ol>
+        
+        <div class="info">
+            <strong>Your webhook URL will be:</strong><br>
+            <code>https://your-app.vercel.app/api/webhook</code>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>🔧 Step 2: Configure PayPal Developer Dashboard</h3>
+        <ol>
+            <li>Go to <a href="https://developer.paypal.com" target="_blank">developer.paypal.com</a></li>
+            <li>Log in with your PayPal Business account</li>
+            <li>Navigate to "My Apps & Credentials"</li>
+            <li>Create a new app or edit your existing app</li>
+            <li>In the app settings, go to "Webhooks"</li>
+            <li>Click "Add Webhook"</li>
+            <li>Enter your webhook URL: <span class="highlight">https://your-app.vercel.app/api/webhook</span></li>
+            <li>Select these event types:
+                <ul>
+                    <li>✅ <strong>Payment sale completed</strong></li>
+                    <li>✅ <strong>Payment sale pending</strong></li>
+                </ul>
+            </li>
+            <li>Save the webhook</li>
+            <li>Copy the <strong>Webhook ID</strong> from the webhook details</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h3>🔑 Step 3: Update Environment Variable</h3>
+        <p>Update your Vercel environment variable with the actual webhook ID:</p>
+        <ol>
+            <li>Go to your Vercel project dashboard</li>
+            <li>Navigate to Settings → Environment Variables</li>
+            <li>Edit the <code>PAYPAL_WEBHOOK_ID</code> variable</li>
+            <li>Replace the value with your actual PayPal webhook ID</li>
+            <li>Redeploy your application</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h3>💳 Step 4: Update Your Registration Form</h3>
+        <p>Modify your existing PayPal form to include player information:</p>
+        
+        <div class="code-block">
+function handleReservation() {
+    if (!selectedDate) {
+        alert('Please select a date first!');
+        return;
+    }
+
+    // Get player name
+    const playerName = prompt("Enter your full name for tournament registration:");
+    if (!playerName || playerName.trim() === '') {
+        alert('Name is required for registration!');
+        return;
+    }
+
+    const totalAmount = seatCount * 10;
+    const itemName = `FNM Commander - ${selectedDate} - ${seatCount} Seat(s)`;
+    
+    // Include player name in custom field for webhook processing
+    const customData = JSON.stringify({
+        playerName: playerName.trim(),
+        eventDate: selectedDate,
+        seats: seatCount
+    });
+
+    const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=njcomicstop@gmail.com&item_name=${encodeURIComponent(itemName)}&amount=${totalAmount.toFixed(2)}&currency_code=USD&custom=${encodeURIComponent(customData)}&return=https://your-app.vercel.app/success&cancel_return=https://your-app.vercel.app/&notify_url=https://your-app.vercel.app/api/webhook`;
+
+    window.open(paypalUrl, '_blank');
+}
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>🧪 Step 5: Test the Integration</h3>
+        <ol>
+            <li>Use PayPal's Sandbox environment for testing</li>
+            <li>Create a test payment through your registration form</li>
+            <li>Check the tournament manager for automatic player addition</li>
+            <li>Verify webhook logs in Vercel dashboard</li>
+            <li>Use the "Test PayPal" button in the tournament manager</li>
+        </ol>
+        
+        <div class="warning">
+            <strong>Testing Tips:</strong>
+            <ul>
+                <li>Start with PayPal Sandbox before going live</li>
+                <li>Check Vercel function logs for debugging</li>
+                <li>Verify webhook events in PayPal developer dashboard</li>
+                <li>Test with different payment amounts (1-4 seats)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>🎯 Step 6: Go Live</h3>
+        <ol>
+            <li>Switch PayPal app from Sandbox to Live</li>
+            <li>Update webhook URL to production endpoint</li>
+            <li>Test with a small real payment</li>
+            <li>Monitor webhook activity and player registration</li>
+            <li>Set up monitoring/alerts for failed webhooks</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h3>📊 Features Available</h3>
+        <ul>
+            <li>✅ <strong>Automatic Player Registration:</strong> Players added when payment completes</li>
+            <li>✅ <strong>Manual Player Addition:</strong> Add players manually if needed</li>
+            <li>✅ <strong>Pod Generation:</strong> Automatically create 4-player pods</li>
+            <li>✅ <strong>Payment Tracking:</strong> See confirmed vs manual payments</li>
+            <li>✅ <strong>Real-time Updates:</strong> Tournament data syncs automatically</li>
+            <li>✅ <strong>Seat Management:</strong> Track available seats (max 20)</li>
+            <li>✅ <strong>Webhook Status:</strong> Monitor PayPal integration health</li>
+        </ul>
+    </div>
+
+    <div class="success">
+        <h3>🎉 Complete Workflow</h3>
+        <ol>
+            <li><strong>Player Registration:</strong> Customer fills form and pays via PayPal</li>
+            <li><strong>Webhook Processing:</strong> PayPal sends payment data to your Vercel function</li>
+            <li><strong>Automatic Addition:</strong> Player is automatically added to tournament</li>
+            <li><strong>Tournament Management:</strong> Generate pods, track players, manage event</li>
+            <li><strong>Event Execution:</strong> Run your Friday Night Magic tournament!</li>
+        </ol>
+    </div>
+
+    <div class="info">
+        <h4>🔗 Useful Links:</h4>
+        <ul>
+            <li><a href="https://developer.paypal.com/docs/api-basics/notifications/webhooks/" target="_blank">PayPal Webhooks Documentation</a></li>
+            <li><a href="https://vercel.com/docs/concepts/functions/serverless-functions" target="_blank">Vercel Serverless Functions</a></li>
+            <li><a href="https://vercel.com/docs/concepts/projects/environment-variables" target="_blank">Vercel Environment Variables</a></li>
+        </ul>
+    </div>
+
+    <div class="warning">
+        <h4>⚠️ Important Security Notes:</h4>
+        <ul>
+            <li>Always verify webhook signatures in production</li>
+            <li>Never expose PayPal credentials in client-side code</li>
+            <li>Use HTTPS for all webhook endpoints</li>
+            <li>Monitor webhook logs for suspicious activity</li>
+            <li>Implement rate limiting if needed</li>
+        </ul>
+    </div>
+</body>
+</html>
