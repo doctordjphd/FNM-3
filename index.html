@@ -519,12 +519,8 @@
       let paypalLoaded = false;
       let debugInfo = [];
       
-      // Try multiple possible backend URLs
-      const POSSIBLE_BACKENDS = [
-          'https://mtg-webhook-manager.vercel.app',
-          'https://paypal-webhook-issue.vercel.app',
-          'https://mtg-events.vercel.app'
-      ];
+      // Use the working backend URL
+      const BACKEND_URL = 'https://fnmmanager-k1ewyzdei-djh269-3120s-projects.vercel.app';
 
       // Debug logging function
       function logDebug(message, data = null) {
@@ -568,51 +564,24 @@
           try {
               showMessage('Loading configuration...', 'loading');
               logDebug('Initializing app');
+              logDebug(`Using backend: ${BACKEND_URL}`);
               
-              let configResponse = null;
-              let workingBackend = null;
+              // Try to fetch config from the working backend
+              const response = await fetch(`${BACKEND_URL}/api/config`);
               
-              // Try each possible backend URL
-              for (const backendUrl of POSSIBLE_BACKENDS) {
-                  try {
-                      logDebug(`Trying backend: ${backendUrl}`);
-                      
-                      // Direct fetch to config endpoint
-                      const response = await fetch(`${backendUrl}/api/config`, {
-                          method: 'GET',
-                          headers: {
-                              'Accept': 'application/json',
-                              'Content-Type': 'application/json'
-                          }
-                      });
-                      
-                      logDebug(`Config response status: ${response.status}`);
-                      logDebug(`Config response headers:`, Object.fromEntries(response.headers.entries()));
-                      
-                      if (response.ok) {
-                          configResponse = response;
-                          workingBackend = backendUrl;
-                          break;
-                      } else {
-                          const errorText = await response.text();
-                          logDebug(`Config error response:`, errorText);
-                      }
-                  } catch (e) {
-                      logDebug(`Failed to connect to ${backendUrl}:`, e.message);
-                      continue;
-                  }
+              logDebug(`Config response status: ${response.status}`);
+              
+              if (!response.ok) {
+                  const errorText = await response.text();
+                  logDebug(`Config error response:`, errorText);
+                  throw new Error(`Config request failed: ${response.status}`);
               }
               
-              if (!configResponse) {
-                  throw new Error('Could not connect to any backend server');
-              }
-              
-              CONFIG = await configResponse.json();
+              CONFIG = await response.json();
               logDebug('Config loaded:', CONFIG);
               
               // Store the working backend for future requests
-              window.BACKEND_URL = workingBackend;
-              logDebug(`Using backend: ${window.BACKEND_URL}`);
+              window.BACKEND_URL = BACKEND_URL;
               
               // Update manager dashboard link
               const managerLink = document.getElementById('managerLink');
@@ -630,7 +599,7 @@
               
           } catch (error) {
               logDebug('Failed to initialize app:', error.message);
-              showMessage(`❌ Failed to load payment system. Please refresh the page or try again later. (Error: ${error.message})`, 'error');
+              showMessage(`❌ Failed to load payment system: ${error.message}. Please refresh the page or try again later.`, 'error');
           }
       }
 
@@ -688,13 +657,7 @@
               try {
                   // Fetch real-time availability
                   logDebug(`Fetching availability for ${event.date}`);
-                  const availResponse = await fetch(`${window.BACKEND_URL}/api/availability?date=${event.date}`, {
-                      method: 'GET',
-                      headers: {
-                          'Accept': 'application/json',
-                          'Content-Type': 'application/json'
-                      }
-                  });
+                  const availResponse = await fetch(`${BACKEND_URL}/api/availability?date=${event.date}`);
                   
                   let availability = { availableSeats: 20, maxSeats: 20 };
                   
