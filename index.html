@@ -393,6 +393,31 @@
       .reservation-card {
           animation: fadeInUp 0.8s ease-out;
       }
+
+      /* Debug panel */
+      .debug-panel {
+          background: #f8f9fa;
+          border: 2px solid #6c757d;
+          padding: 15px;
+          margin-top: 20px;
+          border-radius: 8px;
+          font-family: monospace;
+          font-size: 12px;
+          white-space: pre-wrap;
+          max-height: 200px;
+          overflow-y: auto;
+      }
+      
+      .debug-toggle {
+          background: #6c757d;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          margin-top: 10px;
+      }
   </style>
 </head>
 <body>
@@ -465,6 +490,9 @@
                   <p class="payment-note">
                       Secure payment processing through PayPal
                   </p>
+                  
+                  <button id="debugToggle" class="debug-toggle" onclick="toggleDebug()">Show Debug Info</button>
+                  <div id="debugPanel" class="debug-panel" style="display: none;"></div>
               </div>
           </div>
       </div>
@@ -489,18 +517,57 @@
       let seatCount = 1;
       let CONFIG = null;
       let paypalLoaded = false;
+      let debugInfo = [];
       
       // Try multiple possible backend URLs
       const POSSIBLE_BACKENDS = [
-          'https://v0-paypal-webhook-issue.vercel.app/',
+          'https://mtg-webhook-manager.vercel.app',
           'https://paypal-webhook-issue.vercel.app',
           'https://mtg-events.vercel.app'
       ];
+
+      // Debug logging function
+      function logDebug(message, data = null) {
+          const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+          let logMessage = `[${timestamp}] ${message}`;
+          if (data) {
+              try {
+                  logMessage += `: ${JSON.stringify(data)}`;
+              } catch (e) {
+                  logMessage += `: [Object]`;
+              }
+          }
+          debugInfo.push(logMessage);
+          console.log(logMessage);
+          
+          // Update debug panel if visible
+          const debugPanel = document.getElementById('debugPanel');
+          if (debugPanel && debugPanel.style.display !== 'none') {
+              debugPanel.textContent = debugInfo.join('\n');
+              debugPanel.scrollTop = debugPanel.scrollHeight;
+          }
+      }
+      
+      function toggleDebug() {
+          const debugPanel = document.getElementById('debugPanel');
+          const debugToggle = document.getElementById('debugToggle');
+          
+          if (debugPanel.style.display === 'none') {
+              debugPanel.style.display = 'block';
+              debugPanel.textContent = debugInfo.join('\n');
+              debugPanel.scrollTop = debugPanel.scrollHeight;
+              debugToggle.textContent = 'Hide Debug Info';
+          } else {
+              debugPanel.style.display = 'none';
+              debugToggle.textContent = 'Show Debug Info';
+          }
+      }
 
       // Initialize configuration and load PayPal
       async function initializeApp() {
           try {
               showMessage('Loading configuration...', 'loading');
+              logDebug('Initializing app');
               
               let configResponse = null;
               let workingBackend = null;
@@ -508,15 +575,40 @@
               // Try each possible backend URL
               for (const backendUrl of POSSIBLE_BACKENDS) {
                   try {
-                      console.log(`Trying backend: ${backendUrl}`);
-                      const response = await fetch(`${backendUrl}/api/config`);
-                      if (response.ok) {
-                          configResponse = response;
-                          workingBackend = backendUrl;
-                          break;
+                      logDebug(`Trying backend: ${backendUrl}`);
+                      
+                      // Use no-cors mode first to test connectivity
+                      const pingResponse = await fetch(`${backendUrl}/api/test`, {
+                          method: 'HEAD',
+                          mode: 'no-cors'
+                      }).catch(e => {
+                          logDebug(`Ping failed for ${backendUrl}`, e.message);
+                          return null;
+                      });
+                      
+                      if (pingResponse) {
+                          logDebug(`Ping successful for ${backendUrl}`);
+                          
+                          // Now try the actual config endpoint
+                          const response = await fetch(`${backendUrl}/api/config`, {
+                              method: 'GET',
+                              mode: 'cors',
+                              credentials: 'omit',
+                              headers: {
+                                  'Accept': 'application/json'
+                              }
+                          });
+                          
+                          logDebug(`Config response status: ${response.status}`);
+                          
+                          if (response.ok) {
+                              configResponse = response;
+                              workingBackend = backendUrl;
+                              break;
+                          }
                       }
                   } catch (e) {
-                      console.log(`Failed to connect to ${backendUrl}:`, e);
+                      logDebug(`Failed to connect to ${backendUrl}:`, e.message);
                       continue;
                   }
               }
@@ -526,9 +618,11 @@
               }
               
               CONFIG = await configResponse.json();
+              logDebug('Config loaded:', CONFIG);
               
               // Store the working backend for future requests
               window.BACKEND_URL = workingBackend;
+              logDebug(`Using backend: ${window.BACKEND_URL}`);
               
               // Update manager dashboard link
               const managerLink = document.getElementById('managerLink');
@@ -545,8 +639,8 @@
               clearMessage();
               
           } catch (error) {
-              console.error('Failed to initialize app:', error);
-              showMessage('❌ Failed to load payment system. Please refresh the page or try again later.', 'error');
+              logDebug('Failed to initialize app:', error.message);
+              showMessage(`❌ Failed to load payment system. Please refresh the page or try again later. (Error: ${error.message})`, 'error');
           }
       }
 
@@ -554,17 +648,21 @@
       function loadPayPalSDK() {
           return new Promise((resolve, reject) => {
               if (paypalLoaded || window.paypal) {
+                  logDebug('PayPal SDK already loaded');
                   resolve();
                   return;
               }
               
+              logDebug('Loading PayPal SDK with client ID:', CONFIG.paypalClientId);
               const script = document.createElement('script');
               script.src = `https://www.paypal.com/sdk/js?client-id=${CONFIG.paypalClientId}&currency=USD`;
               script.onload = () => {
                   paypalLoaded = true;
+                  logDebug('PayPal SDK loaded successfully');
                   resolve();
               };
-              script.onerror = () => {
+              script.onerror = (e) => {
+                  logDebug('Failed to load PayPal SDK:', e);
                   reject(new Error('Failed to load PayPal SDK'));
               };
               document.head.appendChild(script);
@@ -574,6 +672,7 @@
       // Load events and their availability
       async function loadEvents() {
           const container = document.getElementById('dateSelection');
+          logDebug('Loading events');
           
           // Available event dates
           const events = [
@@ -598,11 +697,23 @@
               
               try {
                   // Fetch real-time availability
-                  const availResponse = await fetch(`${window.BACKEND_URL}/api/availability?date=${event.date}`);
+                  logDebug(`Fetching availability for ${event.date}`);
+                  const availResponse = await fetch(`${window.BACKEND_URL}/api/availability?date=${event.date}`, {
+                      method: 'GET',
+                      mode: 'cors',
+                      credentials: 'omit',
+                      headers: {
+                          'Accept': 'application/json'
+                      }
+                  });
+                  
                   let availability = { availableSeats: 20, maxSeats: 20 };
                   
                   if (availResponse.ok) {
                       availability = await availResponse.json();
+                      logDebug(`Availability for ${event.date}:`, availability);
+                  } else {
+                      logDebug(`Failed to get availability for ${event.date}:`, await availResponse.text());
                   }
 
                   const label = document.createElement('label');
@@ -614,7 +725,7 @@
                   `;
                   container.appendChild(label);
               } catch (error) {
-                  console.error(`Failed to load availability for ${event.date}:`, error);
+                  logDebug(`Failed to load availability for ${event.date}:`, error.message);
                   
                   // Fallback display
                   const label = document.createElement('label');
@@ -636,6 +747,7 @@
 
       function selectDate(date) {
           selectedDate = date;
+          logDebug(`Selected date: ${date}`);
           renderPayPalButton();
       }
 
@@ -643,6 +755,7 @@
           seatCount = parseInt(document.getElementById('seatCount').value);
           const totalPrice = seatCount * 10;
           document.getElementById('totalPrice').textContent = `$${totalPrice.toFixed(2)}`;
+          logDebug(`Updated price: $${totalPrice.toFixed(2)} for ${seatCount} seats`);
           renderPayPalButton();
       }
 
@@ -650,24 +763,35 @@
           const container = document.getElementById('messageContainer');
           const className = type === 'loading' ? 'loading-message' : `${type}-message`;
           container.innerHTML = `<div class="${className}">${message}</div>`;
+          logDebug(`Message (${type}): ${message}`);
       }
 
       function clearMessage() {
           const container = document.getElementById('messageContainer');
           container.innerHTML = '';
+          logDebug('Cleared messages');
       }
 
       function renderPayPalButton() {
-          if (!selectedDate || !CONFIG || !paypalLoaded) return;
+          if (!selectedDate || !CONFIG || !paypalLoaded) {
+              logDebug('Cannot render PayPal button yet', { 
+                  selectedDate: !!selectedDate, 
+                  config: !!CONFIG, 
+                  paypalLoaded 
+              });
+              return;
+          }
 
           const container = document.getElementById('paypal-button-container');
           container.innerHTML = '';
+          logDebug('Rendering PayPal button');
 
           const totalAmount = seatCount * 10;
           const itemName = `Friday Night Magic Commander - ${selectedDate} - ${seatCount} Seat${seatCount > 1 ? 's' : ''}`;
 
           window.paypal.Buttons({
               createOrder: function(data, actions) {
+                  logDebug('Creating PayPal order');
                   return actions.order.create({
                       purchase_units: [{
                           amount: {
@@ -688,7 +812,9 @@
                   });
               },
               onApprove: function(data, actions) {
+                  logDebug('PayPal payment approved', data);
                   return actions.order.capture().then(function(details) {
+                      logDebug('Payment captured', details);
                       showMessage(`🎉 Payment successful! Your reservation for ${seatCount} seat${seatCount > 1 ? 's' : ''} on ${selectedDate} has been confirmed. You will receive a confirmation email shortly.`, 'success');
                       
                       // Refresh availability after successful payment
@@ -698,10 +824,11 @@
                   });
               },
               onError: function(err) {
-                  console.error('PayPal Error:', err);
+                  logDebug('PayPal Error:', err);
                   showMessage('❌ Payment failed. Please try again or contact support.', 'error');
               },
               onCancel: function(data) {
+                  logDebug('PayPal payment cancelled', data);
                   showMessage('Payment was cancelled. Your reservation was not completed.', 'error');
               },
               style: {
