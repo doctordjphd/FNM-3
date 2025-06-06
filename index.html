@@ -483,6 +483,34 @@
             transform: translateY(-3px);
             box-shadow: 6px 6px 0px #666;
         }
+
+        /* Loading and Success States */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+        }
         
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -550,6 +578,8 @@
             animation-delay: 0.4s;
         }
     </style>
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
 </head>
 <body>
     <!-- Header -->
@@ -579,6 +609,8 @@
                 </h3>
                 <p style="margin-bottom: 20px; font-size: 0.95rem; color: #555; font-style: italic;">
                 </p>
+
+                <div id="messageContainer"></div>
 
                 <div class="date-selection" id="dateSelection">
                     <!-- Date will be populated by JavaScript -->
@@ -610,16 +642,14 @@
                         <p>🏆: + 1 Free Pack & Free Seat Reservation at next week's FNM Commander event</p>
                     </div>
                     
-                    <button class="reserve-btn" onclick="handleReservation()" id="reserveBtn" disabled>
-                        CLICK TO RESERVE YOUR SEAT
-                    </button>
+                    <div id="paypal-button-container"></div>
 
                     <p class="hygiene-note">
                         Please come showered, clean and use deodorant. If your hygiene is an interruption you will be asked to leave and lose your seat with no refund. Thank you!
                     </p>
                     
                     <p class="payment-note">
-                        You will be redirected to PayPal to complete your payment
+                        Secure payment processing through PayPal
                     </p>
                 </div>
             </div>
@@ -644,10 +674,20 @@
     </footer>
 
     <!-- Employee Link -->
+    <a href="YOUR_MANAGER_DASHBOARD_URL" class="employee-link" target="_blank">
+        👨‍💼 Manager Dashboard
+    </a>
 
     <script>
         let selectedDate = '';
         let seatCount = 1;
+        
+        // Configuration - UPDATE THESE VALUES
+        const CONFIG = {
+            PAYPAL_CLIENT_ID: 'YOUR_PAYPAL_CLIENT_ID', // Replace with your PayPal Client ID
+            WEBHOOK_URL: 'YOUR_DEPLOYED_URL/api/webhook/paypal', // Replace with your deployed webhook URL
+            MANAGER_DASHBOARD_URL: 'YOUR_DEPLOYED_URL/manager' // Replace with your manager dashboard URL
+        };
 
         // Get this week's Friday
         function getThisWeeksFriday() {
@@ -667,53 +707,139 @@
             return friday;
         }
 
-        // Populate date selection with this week's Friday
+        // Populate date selection with upcoming events
         function populateDates() {
             const container = document.getElementById('dateSelection');
-            const formatted = 'Friday, June 13, 2025 - FNM Commander (8:30 PM - 10:30 PM)';
-            const dateString = '2025-06-13';
-        
-            const label = document.createElement('label');
-            label.className = 'date-option';
-            label.innerHTML = `
-                <input type="radio" name="date" value="${dateString}" onchange="selectDate('${dateString}')" checked>
-                <strong>${formatted}</strong>
-                <div class="seat-availability">15/20 seats remaining</div>
-            `;
-            container.appendChild(label);
-        
-            // Auto-select June 13
-            selectDate(dateString);
+            
+            // Available event dates - you can modify these
+            const events = [
+                {
+                    date: '2025-06-13',
+                    display: 'Friday, June 13, 2025 - FNM Commander (8:30 PM - 10:30 PM)',
+                    available: 15,
+                    total: 20
+                },
+                {
+                    date: '2025-06-20',
+                    display: 'Friday, June 20, 2025 - FNM Commander (8:30 PM - 10:30 PM)',
+                    available: 20,
+                    total: 20
+                },
+                {
+                    date: '2025-06-27',
+                    display: 'Friday, June 27, 2025 - FNM Commander (8:30 PM - 10:30 PM)',
+                    available: 20,
+                    total: 20
+                }
+            ];
+
+            events.forEach((event, index) => {
+                const label = document.createElement('label');
+                label.className = 'date-option';
+                label.innerHTML = `
+                    <input type="radio" name="date" value="${event.date}" onchange="selectDate('${event.date}')" ${index === 0 ? 'checked' : ''}>
+                    <strong>${event.display}</strong>
+                    <div class="seat-availability">${event.available}/${event.total} seats remaining</div>
+                `;
+                container.appendChild(label);
+            });
+
+            // Auto-select first event
+            if (events.length > 0) {
+                selectDate(events[0].date);
+            }
         }
 
         function selectDate(date) {
             selectedDate = date;
-            document.getElementById('reserveBtn').disabled = false;
+            renderPayPalButton();
         }
 
         function updatePrice() {
             seatCount = parseInt(document.getElementById('seatCount').value);
             const totalPrice = seatCount * 10;
             document.getElementById('totalPrice').textContent = `$${totalPrice.toFixed(2)}`;
+            renderPayPalButton(); // Re-render button with new price
         }
 
-        function handleReservation() {
-            if (!selectedDate) {
-                alert('Please select a date first!');
-                return;
-            }
+        function showMessage(message, type = 'success') {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="${type}-message">${message}</div>`;
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function renderPayPalButton() {
+            if (!selectedDate) return;
+
+            const container = document.getElementById('paypal-button-container');
+            container.innerHTML = ''; // Clear existing button
 
             const totalAmount = seatCount * 10;
             const itemName = `Friday Night Magic Commander - ${selectedDate} - ${seatCount} Seat${seatCount > 1 ? 's' : ''}`;
 
-            // Replace YOUR_PAYPAL_EMAIL with your actual PayPal email
-            const paypalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=njcomicstop@gmail.com&item_name=${encodeURIComponent(itemName)}&amount=${totalAmount.toFixed(2)}&currency_code=USD&return=https://doctordjphd.github.io/FNM2/success.html&cancel_return=https://doctordjphd.github.io/FNM2/`;
-
-            window.open(paypalUrl, '_blank');
+            paypal.Buttons({
+                createOrder: function(data, actions) {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: {
+                                value: totalAmount.toFixed(2),
+                                currency_code: 'USD'
+                            },
+                            description: itemName,
+                            custom_id: selectedDate, // Pass event date for webhook processing
+                            items: [{
+                                name: itemName,
+                                unit_amount: {
+                                    value: '10.00',
+                                    currency_code: 'USD'
+                                },
+                                quantity: seatCount.toString()
+                            }]
+                        }]
+                    });
+                },
+                onApprove: function(data, actions) {
+                    return actions.order.capture().then(function(details) {
+                        // Payment successful
+                        showMessage(`🎉 Payment successful! Your reservation for ${seatCount} seat${seatCount > 1 ? 's' : ''} on ${selectedDate} has been confirmed. You will receive a confirmation email shortly.`, 'success');
+                        
+                        // Optionally redirect to a success page
+                        setTimeout(() => {
+                            // window.location.href = 'success.html';
+                        }, 3000);
+                    });
+                },
+                onError: function(err) {
+                    console.error('PayPal Error:', err);
+                    showMessage('❌ Payment failed. Please try again or contact support.', 'error');
+                },
+                onCancel: function(data) {
+                    showMessage('Payment was cancelled. Your reservation was not completed.', 'error');
+                },
+                style: {
+                    layout: 'vertical',
+                    color: 'black',
+                    shape: 'rect',
+                    label: 'pay',
+                    height: 55
+                }
+            }).render('#paypal-button-container');
         }
 
         // Initialize the page
-        populateDates();
+        document.addEventListener('DOMContentLoaded', function() {
+            populateDates();
+            
+            // Update the employee link
+            const employeeLink = document.querySelector('.employee-link');
+            if (employeeLink && CONFIG.MANAGER_DASHBOARD_URL !== 'YOUR_DEPLOYED_URL/manager') {
+                employeeLink.href = CONFIG.MANAGER_DASHBOARD_URL;
+            }
+        });
     </script>
 </body>
 </html>
