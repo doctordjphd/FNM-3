@@ -418,6 +418,25 @@
           font-size: 12px;
           margin-top: 10px;
       }
+
+      .url-input {
+          width: 100%;
+          padding: 10px;
+          margin: 10px 0;
+          border: 2px solid #ccc;
+          border-radius: 4px;
+          font-family: monospace;
+      }
+
+      .test-button {
+          background: #007bff;
+          color: white;
+          border: none;
+          padding: 10px 15px;
+          border-radius: 4px;
+          cursor: pointer;
+          margin: 5px;
+      }
   </style>
 </head>
 <body>
@@ -492,7 +511,15 @@
                   </p>
                   
                   <button id="debugToggle" class="debug-toggle" onclick="toggleDebug()">Show Debug Info</button>
-                  <div id="debugPanel" class="debug-panel" style="display: none;"></div>
+                  <div id="debugPanel" class="debug-panel" style="display: none;">
+                      <div style="margin-bottom: 10px;">
+                          <strong>Manual Backend URL Test:</strong><br>
+                          <input type="text" id="manualUrl" class="url-input" placeholder="Enter your Vercel URL (e.g., https://your-app.vercel.app)" value="https://v0-paypal-webhook-issue.vercel.app">
+                          <button class="test-button" onclick="testManualUrl()">Test This URL</button>
+                          <button class="test-button" onclick="useManualUrl()">Use This URL</button>
+                      </div>
+                      <div id="debugContent"></div>
+                  </div>
               </div>
           </div>
       </div>
@@ -520,7 +547,7 @@
       let debugInfo = [];
       
       // Use the working backend URL
-      const BACKEND_URL = 'https://fnmmanager-k1ewyzdei-djh269-3120s-projects.vercel.app';
+      const BACKEND_URL = 'https://v0-paypal-webhook-issue.vercel.app';
 
       // Debug logging function
       function logDebug(message, data = null) {
@@ -537,10 +564,14 @@
           console.log(logMessage);
           
           // Update debug panel if visible
-          const debugPanel = document.getElementById('debugPanel');
-          if (debugPanel && debugPanel.style.display !== 'none') {
-              debugPanel.textContent = debugInfo.join('\n');
-              debugPanel.scrollTop = debugPanel.scrollHeight;
+          updateDebugPanel();
+      }
+      
+      function updateDebugPanel() {
+          const debugContent = document.getElementById('debugContent');
+          if (debugContent) {
+              debugContent.textContent = debugInfo.join('\n');
+              debugContent.scrollTop = debugContent.scrollHeight;
           }
       }
       
@@ -550,12 +581,86 @@
           
           if (debugPanel.style.display === 'none') {
               debugPanel.style.display = 'block';
-              debugPanel.textContent = debugInfo.join('\n');
-              debugPanel.scrollTop = debugPanel.scrollHeight;
+              updateDebugPanel();
               debugToggle.textContent = 'Hide Debug Info';
           } else {
               debugPanel.style.display = 'none';
               debugToggle.textContent = 'Show Debug Info';
+          }
+      }
+
+      async function testManualUrl() {
+          const url = document.getElementById('manualUrl').value.trim();
+          if (!url) {
+              alert('Please enter a URL');
+              return;
+          }
+          
+          logDebug(`Testing manual URL: ${url}`);
+          
+          try {
+              const response = await fetch(`${url}/api/test-cors`, {
+                  mode: 'cors',
+                  headers: {
+                      'Accept': 'application/json'
+                  }
+              });
+              
+              if (response.ok) {
+                  const data = await response.json();
+                  logDebug(`Manual URL test successful:`, data);
+                  alert('✅ URL works! Click "Use This URL" to proceed.');
+              } else {
+                  logDebug(`Manual URL test failed: ${response.status}`);
+                  alert(`❌ URL test failed: ${response.status}`);
+              }
+          } catch (error) {
+              logDebug(`Manual URL test error:`, error.message);
+              alert(`❌ URL test error: ${error.message}`);
+          }
+      }
+
+      async function useManualUrl() {
+          const url = document.getElementById('manualUrl').value.trim();
+          if (!url) {
+              alert('Please enter a URL');
+              return;
+          }
+          
+          window.BACKEND_URL = url;
+          logDebug(`Using manual URL: ${url}`);
+          
+          // Try to initialize with this URL
+          try {
+              const response = await fetch(`${url}/api/config`, {
+                  mode: 'cors',
+                  headers: {
+                      'Accept': 'application/json'
+                  }
+              });
+              
+              if (response.ok) {
+                  CONFIG = await response.json();
+                  logDebug('Config loaded with manual URL:', CONFIG);
+                  
+                  // Update manager dashboard link
+                  const managerLink = document.getElementById('managerLink');
+                  if (managerLink && CONFIG.managerDashboardUrl) {
+                      managerLink.href = CONFIG.managerDashboardUrl;
+                  }
+                  
+                  // Load PayPal SDK and events
+                  await loadPayPalSDK();
+                  await loadEvents();
+                  clearMessage();
+                  
+                  alert('✅ Successfully connected! Payment system is now ready.');
+              } else {
+                  throw new Error(`Config failed: ${response.status}`);
+              }
+          } catch (error) {
+              logDebug('Manual URL initialization failed:', error.message);
+              alert(`❌ Failed to initialize with this URL: ${error.message}`);
           }
       }
 
@@ -567,7 +672,12 @@
               logDebug(`Using backend: ${BACKEND_URL}`);
               
               // Try to fetch config from the working backend
-              const response = await fetch(`${BACKEND_URL}/api/config`);
+              const response = await fetch(`${BACKEND_URL}/api/config`, {
+                  mode: 'cors',
+                  headers: {
+                      'Accept': 'application/json'
+                  }
+              });
               
               logDebug(`Config response status: ${response.status}`);
               
@@ -599,7 +709,12 @@
               
           } catch (error) {
               logDebug('Failed to initialize app:', error.message);
-              showMessage(`❌ Failed to load payment system: ${error.message}. Please refresh the page or try again later.`, 'error');
+              showMessage(`❌ Failed to load payment system: ${error.message}. Please use the debug panel below to manually enter your Vercel URL.`, 'error');
+              
+              // Auto-show debug panel on error
+              document.getElementById('debugPanel').style.display = 'block';
+              document.getElementById('debugToggle').textContent = 'Hide Debug Info';
+              updateDebugPanel();
           }
       }
 
@@ -657,7 +772,12 @@
               try {
                   // Fetch real-time availability
                   logDebug(`Fetching availability for ${event.date}`);
-                  const availResponse = await fetch(`${BACKEND_URL}/api/availability?date=${event.date}`);
+                  const availResponse = await fetch(`${window.BACKEND_URL}/api/availability?date=${event.date}`, {
+                      mode: 'cors',
+                      headers: {
+                          'Accept': 'application/json'
+                      }
+                  });
                   
                   let availability = { availableSeats: 20, maxSeats: 20 };
                   
@@ -795,7 +915,14 @@
       }
 
       // Initialize the app when page loads
-      document.addEventListener('DOMContentLoaded', initializeApp);
+      document.addEventListener('DOMContentLoaded', function() {
+          // Auto-show debug panel on load to help troubleshoot
+          document.getElementById('debugPanel').style.display = 'block';
+          document.getElementById('debugToggle').textContent = 'Hide Debug Info';
+          
+          // Start initialization
+          initializeApp();
+      });
   </script>
 </body>
 </html>
