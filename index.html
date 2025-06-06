@@ -490,21 +490,45 @@
       let CONFIG = null;
       let paypalLoaded = false;
       
-      // This will be automatically set to your deployed Vercel URL
-      const BACKEND_URL = 'https://mtg-webhook-manager.vercel.app';
+      // Try multiple possible backend URLs
+      const POSSIBLE_BACKENDS = [
+          'https://mtg-webhook-manager.vercel.app',
+          'https://paypal-webhook-issue.vercel.app',
+          'https://mtg-events.vercel.app'
+      ];
 
       // Initialize configuration and load PayPal
       async function initializeApp() {
           try {
               showMessage('Loading configuration...', 'loading');
               
-              // Fetch secure configuration from backend
-              const configResponse = await fetch(`${BACKEND_URL}/api/config`);
-              if (!configResponse.ok) {
-                  throw new Error(`Config fetch failed: ${configResponse.status}`);
+              let configResponse = null;
+              let workingBackend = null;
+              
+              // Try each possible backend URL
+              for (const backendUrl of POSSIBLE_BACKENDS) {
+                  try {
+                      console.log(`Trying backend: ${backendUrl}`);
+                      const response = await fetch(`${backendUrl}/api/config`);
+                      if (response.ok) {
+                          configResponse = response;
+                          workingBackend = backendUrl;
+                          break;
+                      }
+                  } catch (e) {
+                      console.log(`Failed to connect to ${backendUrl}:`, e);
+                      continue;
+                  }
+              }
+              
+              if (!configResponse) {
+                  throw new Error('Could not connect to any backend server');
               }
               
               CONFIG = await configResponse.json();
+              
+              // Store the working backend for future requests
+              window.BACKEND_URL = workingBackend;
               
               // Update manager dashboard link
               const managerLink = document.getElementById('managerLink');
@@ -574,7 +598,7 @@
               
               try {
                   // Fetch real-time availability
-                  const availResponse = await fetch(`${BACKEND_URL}/api/availability?date=${event.date}`);
+                  const availResponse = await fetch(`${window.BACKEND_URL}/api/availability?date=${event.date}`);
                   let availability = { availableSeats: 20, maxSeats: 20 };
                   
                   if (availResponse.ok) {
@@ -598,7 +622,7 @@
                   label.innerHTML = `
                       <input type="radio" name="date" value="${event.date}" onchange="selectDate('${event.date}')" ${i === 0 ? 'checked' : ''}>
                       <strong>${event.display}</strong>
-                      <div class="seat-availability">Availability loading...</div>
+                      <div class="seat-availability">20/20 seats remaining</div>
                   `;
                   container.appendChild(label);
               }
