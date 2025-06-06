@@ -333,29 +333,6 @@
           font-style: italic;
       }
       
-      /* Employee Link */
-      .employee-link {
-          position: fixed;
-          bottom: 30px;
-          right: 30px;
-          background: black;
-          color: white;
-          padding: 15px 25px;
-          text-decoration: none;
-          border: 3px solid black;
-          font-weight: bold;
-          border-radius: 25px;
-          box-shadow: 4px 4px 0px #666;
-          transition: all 0.3s ease;
-          z-index: 1000;
-      }
-      
-      .employee-link:hover {
-          background: #333;
-          transform: translateY(-3px);
-          box-shadow: 6px 6px 0px #666;
-      }
-      
       /* Responsive Design */
       @media (max-width: 768px) {
           .title-section h1 {
@@ -479,11 +456,6 @@
       </div>
   </footer>
 
-  <!-- Employee Link -->
-  <a href="#" class="employee-link" id="managerLink" target="_blank">
-      👨‍💼 Manager Dashboard
-  </a>
-
   <script>
       let selectedDate = '';
       let seatCount = 1;
@@ -518,12 +490,6 @@
               
               CONFIG = await response.json();
               console.log('Config loaded:', CONFIG);
-              
-              // Update manager dashboard link
-              const managerLink = document.getElementById('managerLink');
-              if (managerLink && CONFIG.managerDashboardUrl) {
-                  managerLink.href = CONFIG.managerDashboardUrl;
-              }
               
               // Load PayPal SDK dynamically
               await loadPayPalSDK();
