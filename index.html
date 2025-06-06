@@ -393,50 +393,6 @@
       .reservation-card {
           animation: fadeInUp 0.8s ease-out;
       }
-
-      /* Debug panel */
-      .debug-panel {
-          background: #f8f9fa;
-          border: 2px solid #6c757d;
-          padding: 15px;
-          margin-top: 20px;
-          border-radius: 8px;
-          font-family: monospace;
-          font-size: 12px;
-          white-space: pre-wrap;
-          max-height: 200px;
-          overflow-y: auto;
-      }
-      
-      .debug-toggle {
-          background: #6c757d;
-          color: white;
-          border: none;
-          padding: 5px 10px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-          margin-top: 10px;
-      }
-
-      .url-input {
-          width: 100%;
-          padding: 10px;
-          margin: 10px 0;
-          border: 2px solid #ccc;
-          border-radius: 4px;
-          font-family: monospace;
-      }
-
-      .test-button {
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 10px 15px;
-          border-radius: 4px;
-          cursor: pointer;
-          margin: 5px;
-      }
   </style>
 </head>
 <body>
@@ -509,17 +465,6 @@
                   <p class="payment-note">
                       Secure payment processing through PayPal
                   </p>
-                  
-                  <button id="debugToggle" class="debug-toggle" onclick="toggleDebug()">Show Debug Info</button>
-                  <div id="debugPanel" class="debug-panel" style="display: none;">
-                      <div style="margin-bottom: 10px;">
-                          <strong>Manual Backend URL Test:</strong><br>
-                          <input type="text" id="manualUrl" class="url-input" placeholder="Enter your Vercel URL (e.g., https://your-app.vercel.app)" value="https://v0-paypal-webhook-issue.vercel.app">
-                          <button class="test-button" onclick="testManualUrl()">Test This URL</button>
-                          <button class="test-button" onclick="useManualUrl()">Use This URL</button>
-                      </div>
-                      <div id="debugContent"></div>
-                  </div>
               </div>
           </div>
       </div>
@@ -544,132 +489,16 @@
       let seatCount = 1;
       let CONFIG = null;
       let paypalLoaded = false;
-      let debugInfo = [];
       
-      // Use the working backend URL
+      // Use the working backend URL with https
       const BACKEND_URL = 'https://v0-paypal-webhook-issue.vercel.app';
-
-      // Debug logging function
-      function logDebug(message, data = null) {
-          const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-          let logMessage = `[${timestamp}] ${message}`;
-          if (data) {
-              try {
-                  logMessage += `: ${JSON.stringify(data)}`;
-              } catch (e) {
-                  logMessage += `: [Object]`;
-              }
-          }
-          debugInfo.push(logMessage);
-          console.log(logMessage);
-          
-          // Update debug panel if visible
-          updateDebugPanel();
-      }
-      
-      function updateDebugPanel() {
-          const debugContent = document.getElementById('debugContent');
-          if (debugContent) {
-              debugContent.textContent = debugInfo.join('\n');
-              debugContent.scrollTop = debugContent.scrollHeight;
-          }
-      }
-      
-      function toggleDebug() {
-          const debugPanel = document.getElementById('debugPanel');
-          const debugToggle = document.getElementById('debugToggle');
-          
-          if (debugPanel.style.display === 'none') {
-              debugPanel.style.display = 'block';
-              updateDebugPanel();
-              debugToggle.textContent = 'Hide Debug Info';
-          } else {
-              debugPanel.style.display = 'none';
-              debugToggle.textContent = 'Show Debug Info';
-          }
-      }
-
-      async function testManualUrl() {
-          const url = document.getElementById('manualUrl').value.trim();
-          if (!url) {
-              alert('Please enter a URL');
-              return;
-          }
-          
-          logDebug(`Testing manual URL: ${url}`);
-          
-          try {
-              const response = await fetch(`${url}/api/test-cors`, {
-                  mode: 'cors',
-                  headers: {
-                      'Accept': 'application/json'
-                  }
-              });
-              
-              if (response.ok) {
-                  const data = await response.json();
-                  logDebug(`Manual URL test successful:`, data);
-                  alert('✅ URL works! Click "Use This URL" to proceed.');
-              } else {
-                  logDebug(`Manual URL test failed: ${response.status}`);
-                  alert(`❌ URL test failed: ${response.status}`);
-              }
-          } catch (error) {
-              logDebug(`Manual URL test error:`, error.message);
-              alert(`❌ URL test error: ${error.message}`);
-          }
-      }
-
-      async function useManualUrl() {
-          const url = document.getElementById('manualUrl').value.trim();
-          if (!url) {
-              alert('Please enter a URL');
-              return;
-          }
-          
-          window.BACKEND_URL = url;
-          logDebug(`Using manual URL: ${url}`);
-          
-          // Try to initialize with this URL
-          try {
-              const response = await fetch(`${url}/api/config`, {
-                  mode: 'cors',
-                  headers: {
-                      'Accept': 'application/json'
-                  }
-              });
-              
-              if (response.ok) {
-                  CONFIG = await response.json();
-                  logDebug('Config loaded with manual URL:', CONFIG);
-                  
-                  // Update manager dashboard link
-                  const managerLink = document.getElementById('managerLink');
-                  if (managerLink && CONFIG.managerDashboardUrl) {
-                      managerLink.href = CONFIG.managerDashboardUrl;
-                  }
-                  
-                  // Load PayPal SDK and events
-                  await loadPayPalSDK();
-                  await loadEvents();
-                  clearMessage();
-                  
-                  alert('✅ Successfully connected! Payment system is now ready.');
-              } else {
-                  throw new Error(`Config failed: ${response.status}`);
-              }
-          } catch (error) {
-              logDebug('Manual URL initialization failed:', error.message);
-              alert(`❌ Failed to initialize with this URL: ${error.message}`);
-          }
-      }
 
       // Initialize configuration and load PayPal
       async function initializeApp() {
           try {
               showMessage('Loading configuration...', 'loading');
-              logDebug('Initializing app');
-              logDebug(`Using backend: ${BACKEND_URL}`);
+              console.log('Initializing app');
+              console.log(`Using backend: ${BACKEND_URL}`);
               
               // Try to fetch config from the working backend
               const response = await fetch(`${BACKEND_URL}/api/config`, {
@@ -679,19 +508,16 @@
                   }
               });
               
-              logDebug(`Config response status: ${response.status}`);
+              console.log(`Config response status: ${response.status}`);
               
               if (!response.ok) {
                   const errorText = await response.text();
-                  logDebug(`Config error response:`, errorText);
+                  console.error(`Config error response:`, errorText);
                   throw new Error(`Config request failed: ${response.status}`);
               }
               
               CONFIG = await response.json();
-              logDebug('Config loaded:', CONFIG);
-              
-              // Store the working backend for future requests
-              window.BACKEND_URL = BACKEND_URL;
+              console.log('Config loaded:', CONFIG);
               
               // Update manager dashboard link
               const managerLink = document.getElementById('managerLink');
@@ -708,13 +534,8 @@
               clearMessage();
               
           } catch (error) {
-              logDebug('Failed to initialize app:', error.message);
-              showMessage(`❌ Failed to load payment system: ${error.message}. Please use the debug panel below to manually enter your Vercel URL.`, 'error');
-              
-              // Auto-show debug panel on error
-              document.getElementById('debugPanel').style.display = 'block';
-              document.getElementById('debugToggle').textContent = 'Hide Debug Info';
-              updateDebugPanel();
+              console.error('Failed to initialize app:', error.message);
+              showMessage(`❌ Failed to load payment system. Please refresh the page or try again later.`, 'error');
           }
       }
 
@@ -722,21 +543,21 @@
       function loadPayPalSDK() {
           return new Promise((resolve, reject) => {
               if (paypalLoaded || window.paypal) {
-                  logDebug('PayPal SDK already loaded');
+                  console.log('PayPal SDK already loaded');
                   resolve();
                   return;
               }
               
-              logDebug('Loading PayPal SDK with client ID:', CONFIG.paypalClientId);
+              console.log('Loading PayPal SDK with client ID:', CONFIG.paypalClientId);
               const script = document.createElement('script');
-              script.src = `https://www.paypal.com/sdk/js?client-id=${CONFIG.paypalClientId}&currency=USD`;
+              script.src = `https://www.paypal.com/sdk/js?client-id=${CONFIG.paypalClientId}&currency=USD&debug=true`;
               script.onload = () => {
                   paypalLoaded = true;
-                  logDebug('PayPal SDK loaded successfully');
+                  console.log('PayPal SDK loaded successfully');
                   resolve();
               };
               script.onerror = (e) => {
-                  logDebug('Failed to load PayPal SDK:', e);
+                  console.error('Failed to load PayPal SDK:', e);
                   reject(new Error('Failed to load PayPal SDK'));
               };
               document.head.appendChild(script);
@@ -746,7 +567,7 @@
       // Load events and their availability
       async function loadEvents() {
           const container = document.getElementById('dateSelection');
-          logDebug('Loading events');
+          console.log('Loading events');
           
           // Available event dates
           const events = [
@@ -771,8 +592,8 @@
               
               try {
                   // Fetch real-time availability
-                  logDebug(`Fetching availability for ${event.date}`);
-                  const availResponse = await fetch(`${window.BACKEND_URL}/api/availability?date=${event.date}`, {
+                  console.log(`Fetching availability for ${event.date}`);
+                  const availResponse = await fetch(`${BACKEND_URL}/api/availability?date=${event.date}`, {
                       mode: 'cors',
                       headers: {
                           'Accept': 'application/json'
@@ -783,10 +604,10 @@
                   
                   if (availResponse.ok) {
                       availability = await availResponse.json();
-                      logDebug(`Availability for ${event.date}:`, availability);
+                      console.log(`Availability for ${event.date}:`, availability);
                   } else {
                       const errorText = await availResponse.text();
-                      logDebug(`Failed to get availability for ${event.date}:`, errorText);
+                      console.error(`Failed to get availability for ${event.date}:`, errorText);
                   }
 
                   const label = document.createElement('label');
@@ -798,7 +619,7 @@
                   `;
                   container.appendChild(label);
               } catch (error) {
-                  logDebug(`Failed to load availability for ${event.date}:`, error.message);
+                  console.error(`Failed to load availability for ${event.date}:`, error.message);
                   
                   // Fallback display
                   const label = document.createElement('label');
@@ -820,7 +641,7 @@
 
       function selectDate(date) {
           selectedDate = date;
-          logDebug(`Selected date: ${date}`);
+          console.log(`Selected date: ${date}`);
           renderPayPalButton();
       }
 
@@ -828,7 +649,7 @@
           seatCount = parseInt(document.getElementById('seatCount').value);
           const totalPrice = seatCount * 10;
           document.getElementById('totalPrice').textContent = `$${totalPrice.toFixed(2)}`;
-          logDebug(`Updated price: $${totalPrice.toFixed(2)} for ${seatCount} seats`);
+          console.log(`Updated price: $${totalPrice.toFixed(2)} for ${seatCount} seats`);
           renderPayPalButton();
       }
 
@@ -836,18 +657,18 @@
           const container = document.getElementById('messageContainer');
           const className = type === 'loading' ? 'loading-message' : `${type}-message`;
           container.innerHTML = `<div class="${className}">${message}</div>`;
-          logDebug(`Message (${type}): ${message}`);
+          console.log(`Message (${type}): ${message}`);
       }
 
       function clearMessage() {
           const container = document.getElementById('messageContainer');
           container.innerHTML = '';
-          logDebug('Cleared messages');
+          console.log('Cleared messages');
       }
 
       function renderPayPalButton() {
           if (!selectedDate || !CONFIG || !paypalLoaded) {
-              logDebug('Cannot render PayPal button yet', { 
+              console.log('Cannot render PayPal button yet', { 
                   selectedDate: !!selectedDate, 
                   config: !!CONFIG, 
                   paypalLoaded 
@@ -857,69 +678,85 @@
 
           const container = document.getElementById('paypal-button-container');
           container.innerHTML = '';
-          logDebug('Rendering PayPal button');
+          console.log('Rendering PayPal button');
 
           const totalAmount = seatCount * 10;
           const itemName = `Friday Night Magic Commander - ${selectedDate} - ${seatCount} Seat${seatCount > 1 ? 's' : ''}`;
 
-          window.paypal.Buttons({
-              createOrder: function(data, actions) {
-                  logDebug('Creating PayPal order');
-                  return actions.order.create({
-                      purchase_units: [{
-                          amount: {
-                              value: totalAmount.toFixed(2),
-                              currency_code: 'USD'
-                          },
-                          description: itemName,
-                          custom_id: selectedDate,
-                          items: [{
-                              name: itemName,
-                              unit_amount: {
-                                  value: '10.00',
-                                  currency_code: 'USD'
-                              },
-                              quantity: seatCount.toString()
-                          }]
-                      }]
-                  });
-              },
-              onApprove: function(data, actions) {
-                  logDebug('PayPal payment approved', data);
-                  return actions.order.capture().then(function(details) {
-                      logDebug('Payment captured', details);
-                      showMessage(`🎉 Payment successful! Your reservation for ${seatCount} seat${seatCount > 1 ? 's' : ''} on ${selectedDate} has been confirmed. You will receive a confirmation email shortly.`, 'success');
+          try {
+              window.paypal.Buttons({
+                  fundingSource: window.paypal.FUNDING.PAYPAL,
+                  style: {
+                      layout: 'vertical',
+                      color: 'black',
+                      shape: 'rect',
+                      label: 'pay',
+                      height: 55
+                  },
+                  createOrder: function(data, actions) {
+                      console.log('Creating PayPal order');
                       
-                      // Refresh availability after successful payment
-                      setTimeout(() => {
-                          loadEvents();
-                      }, 2000);
-                  });
-              },
-              onError: function(err) {
-                  logDebug('PayPal Error:', err);
-                  showMessage('❌ Payment failed. Please try again or contact support.', 'error');
-              },
-              onCancel: function(data) {
-                  logDebug('PayPal payment cancelled', data);
-                  showMessage('Payment was cancelled. Your reservation was not completed.', 'error');
-              },
-              style: {
-                  layout: 'vertical',
-                  color: 'black',
-                  shape: 'rect',
-                  label: 'pay',
-                  height: 55
-              }
-          }).render('#paypal-button-container');
+                      // Create a simple order object
+                      return actions.order.create({
+                          intent: 'CAPTURE',
+                          purchase_units: [{
+                              amount: {
+                                  currency_code: 'USD',
+                                  value: totalAmount.toFixed(2),
+                                  breakdown: {
+                                      item_total: {
+                                          currency_code: 'USD',
+                                          value: totalAmount.toFixed(2)
+                                      }
+                                  }
+                              },
+                              description: itemName,
+                              custom_id: selectedDate,
+                              items: [{
+                                  name: itemName,
+                                  unit_amount: {
+                                      currency_code: 'USD',
+                                      value: '10.00'
+                                  },
+                                  quantity: seatCount.toString(),
+                                  description: `Seat reservation for ${selectedDate}`
+                              }]
+                          }]
+                      });
+                  },
+                  onApprove: function(data, actions) {
+                      console.log('PayPal payment approved', data);
+                      showMessage('Processing payment...', 'loading');
+                      
+                      return actions.order.capture().then(function(details) {
+                          console.log('Payment captured', details);
+                          showMessage(`🎉 Payment successful! Your reservation for ${seatCount} seat${seatCount > 1 ? 's' : ''} on ${selectedDate} has been confirmed. You will receive a confirmation email shortly.`, 'success');
+                          
+                          // Refresh availability after successful payment
+                          setTimeout(() => {
+                              loadEvents();
+                          }, 2000);
+                      });
+                  },
+                  onError: function(err) {
+                      console.error('PayPal Error:', err);
+                      showMessage('❌ Payment failed. Please try again or contact support.', 'error');
+                  },
+                  onCancel: function(data) {
+                      console.log('PayPal payment cancelled', data);
+                      showMessage('Payment was cancelled. Your reservation was not completed.', 'error');
+                  }
+              }).render('#paypal-button-container');
+              
+              console.log('PayPal button rendered successfully');
+          } catch (error) {
+              console.error('Error rendering PayPal button:', error);
+              showMessage('❌ Error loading payment options. Please refresh the page.', 'error');
+          }
       }
 
       // Initialize the app when page loads
       document.addEventListener('DOMContentLoaded', function() {
-          // Auto-show debug panel on load to help troubleshoot
-          document.getElementById('debugPanel').style.display = 'block';
-          document.getElementById('debugToggle').textContent = 'Hide Debug Info';
-          
           // Start initialization
           initializeApp();
       });
