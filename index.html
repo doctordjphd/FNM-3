@@ -577,35 +577,25 @@
                   try {
                       logDebug(`Trying backend: ${backendUrl}`);
                       
-                      // Use no-cors mode first to test connectivity
-                      const pingResponse = await fetch(`${backendUrl}/api/test`, {
-                          method: 'HEAD',
-                          mode: 'no-cors'
-                      }).catch(e => {
-                          logDebug(`Ping failed for ${backendUrl}`, e.message);
-                          return null;
+                      // Direct fetch to config endpoint
+                      const response = await fetch(`${backendUrl}/api/config`, {
+                          method: 'GET',
+                          headers: {
+                              'Accept': 'application/json',
+                              'Content-Type': 'application/json'
+                          }
                       });
                       
-                      if (pingResponse) {
-                          logDebug(`Ping successful for ${backendUrl}`);
-                          
-                          // Now try the actual config endpoint
-                          const response = await fetch(`${backendUrl}/api/config`, {
-                              method: 'GET',
-                              mode: 'cors',
-                              credentials: 'omit',
-                              headers: {
-                                  'Accept': 'application/json'
-                              }
-                          });
-                          
-                          logDebug(`Config response status: ${response.status}`);
-                          
-                          if (response.ok) {
-                              configResponse = response;
-                              workingBackend = backendUrl;
-                              break;
-                          }
+                      logDebug(`Config response status: ${response.status}`);
+                      logDebug(`Config response headers:`, Object.fromEntries(response.headers.entries()));
+                      
+                      if (response.ok) {
+                          configResponse = response;
+                          workingBackend = backendUrl;
+                          break;
+                      } else {
+                          const errorText = await response.text();
+                          logDebug(`Config error response:`, errorText);
                       }
                   } catch (e) {
                       logDebug(`Failed to connect to ${backendUrl}:`, e.message);
@@ -700,10 +690,9 @@
                   logDebug(`Fetching availability for ${event.date}`);
                   const availResponse = await fetch(`${window.BACKEND_URL}/api/availability?date=${event.date}`, {
                       method: 'GET',
-                      mode: 'cors',
-                      credentials: 'omit',
                       headers: {
-                          'Accept': 'application/json'
+                          'Accept': 'application/json',
+                          'Content-Type': 'application/json'
                       }
                   });
                   
@@ -713,7 +702,8 @@
                       availability = await availResponse.json();
                       logDebug(`Availability for ${event.date}:`, availability);
                   } else {
-                      logDebug(`Failed to get availability for ${event.date}:`, await availResponse.text());
+                      const errorText = await availResponse.text();
+                      logDebug(`Failed to get availability for ${event.date}:`, errorText);
                   }
 
                   const label = document.createElement('label');
